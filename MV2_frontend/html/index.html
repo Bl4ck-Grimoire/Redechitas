@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Conjunto Residencial</title>
+</head>
+<body>
+  <script>
+    const session = localStorage.getItem('admin_session');
+    if (session) {
+      window.location.replace('/capasFront-ms1/index.html');
+    } else {
+      window.location.replace('/login.html');
+    }
+  </script>
+</body>
+</html>

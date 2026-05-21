@@ -1,0 +1,350 @@
+services:
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # MS1 – Gestión de Usuarios  (puerto interno: 3000)
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  MS1:
+    image: emmanuelescobar2007/ms1-usuarios
+    environment:
+      DB_HOST: microservicios-docker_db_ms1
+      DB_USER: root
+      DB_PASSWORD: Josue2311$$
+      DB_NAME: usuarios_db
+    networks:
+      - red_microservicios
+    deploy:
+      replicas: 1
+      endpoint_mode: dnsrr
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
+
+  db_ms1:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: Josue2311$$
+      MYSQL_DATABASE: usuarios_db
+    volumes:
+      - db_ms1_data:/var/lib/mysql
+    configs:
+      - source: sql_ms1
+        target: /docker-entrypoint-initdb.d/init.sql
+    networks:
+      - red_microservicios
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pJosue2311$$"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 150s
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # MS2 – Gestión de Propiedades  (puerto interno: 3001)
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  MS2:
+    image: emmanuelescobar2007/ms2-propiedades
+    environment:
+      DB_HOST: microservicios-docker_db_ms2
+      DB_USER: root
+      DB_PASSWORD: Josue2311$$
+      DB_NAME: propiedades_db
+    networks:
+      - red_microservicios
+    deploy:
+      replicas: 1
+      endpoint_mode: dnsrr
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
+
+  db_ms2:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: Josue2311$$
+      MYSQL_DATABASE: propiedades_db
+    volumes:
+      - db_ms2_data:/var/lib/mysql
+    configs:
+      - source: sql_ms2
+        target: /docker-entrypoint-initdb.d/init.sql
+    networks:
+      - red_microservicios
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pJosue2311$$"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 150s
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # MS3 – Gestión  (puerto interno: 3002)
+  # Depende de MS1 y MS2
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  MS3:
+    image: emmanuelescobar2007/ms3-gestion
+    environment:
+      DB_HOST: db_ms3
+      DB_USER: root
+      DB_PASSWORD: Josue2311$$
+      DB_NAME: residencias_gestion
+      MS1_URL: http://MS1:3000
+      MS2_URL: http://MS2:3001
+    networks:
+      - red_microservicios
+    deploy:
+      replicas: 1
+      endpoint_mode: dnsrr
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 15s
+        max_attempts: 5
+
+  db_ms3:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: Josue2311$$
+      MYSQL_DATABASE: residencias_gestion
+    volumes:
+      - db_ms3_data:/var/lib/mysql
+    configs:
+      - source: sql_ms3
+        target: /docker-entrypoint-initdb.d/init.sql
+    networks:
+      - red_microservicios
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pJosue2311$$"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 150s
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # APACHE SPARK – Clúster de procesamiento distribuido
+  #
+  #   spark-master  →  coordina el clúster  (UI: :8081, protocolo: :7077)
+  #   spark-worker  →  nodos de cómputo     (2 réplicas, escalable)
+  #
+  #   Los CSVs se comparten con MS4 a través del volumen "csv_data"
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  spark-master:
+    image: apache/spark:3.5.1
+    command: >
+      /opt/spark/bin/spark-class
+      org.apache.spark.deploy.master.Master
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+      - SPARK_MASTER_WEBUI_PORT=8081
+    ports:
+      # UI del Spark Master accesible directamente en el manager
+      - target: 8081
+        published: 8081
+        protocol: tcp
+        mode: host
+    volumes:
+      - csv_data:/data/csvs
+      - spark_results:/data/results
+    networks:
+      - red_microservicios
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+
+  spark-worker:
+    image: apache/spark:3.5.1
+    command: >
+      /opt/spark/bin/spark-class
+      org.apache.spark.deploy.worker.Worker
+      spark://spark-master:7077
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_WORKER_CORES=2
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    volumes:
+      - csv_data:/data/csvs
+      - spark_results:/data/results
+    networks:
+      - red_microservicios
+    deploy:
+      # Aumentar réplicas para escalar el clúster horizontalmente
+      replicas: 2
+      placement:
+        constraints:
+          - node.role == worker
+      restart_policy:
+        condition: on-failure
+        delay: 15s
+        max_attempts: 5
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # MS4 – Analytics Service  (puerto interno: 3003)
+  #
+  #   FastAPI + PySpark client
+  #   Lee los CSVs desde /data/csvs (mismo volumen que Spark)
+  #   Se conecta al master en spark://spark-master:7077
+  #   Accesible via HAProxy en /api/analytics
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  MS4:
+    image: emmanuelescobar2007/ms4-analytics
+    environment:
+      SPARK_MASTER: spark://spark-master:7077
+      DATA_DIR: /data/csvs
+      # Directorio donde Spark guarda los resultados pre-computados
+      RESULTS_DIR: /data/results
+    volumes:
+      - csv_data:/data/csvs
+      # Volumen compartido: Spark escribe JSON aquí, MS4 los lee
+      - spark_results:/data/results
+    networks:
+      - red_microservicios
+    deploy:
+      replicas: 1
+      endpoint_mode: dnsrr
+      placement:
+        constraints:
+          # Debe correr en el mismo nodo que spark-master para acceder al volumen
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 20s
+        max_attempts: 5
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # HAProxy – Proxy inverso
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  haproxy:
+    image: haproxy:2.9-alpine
+    ports:
+      - target: 80
+        published: 8080
+        protocol: tcp
+        mode: host
+      - target: 8404
+        published: 8404
+        protocol: tcp
+        mode: host
+    configs:
+      - source: haproxy_cfg
+        target: /usr/local/etc/haproxy/haproxy.cfg
+    networks:
+      - red_microservicios
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Frontend – Nginx
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  frontend:
+    image: emmanuelescobar2007/mv2-frontend
+    ports:
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: host
+    networks:
+      - red_microservicios
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == worker
+      restart_policy:
+        condition: on-failure
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Configuraciones
+# ─────────────────────────────────────────────────────────────────────────────
+
+configs:
+  haproxy_cfg:
+    file: ./haproxy/haproxy.cfg
+  sql_ms1:
+    file: ./ms1-usuarios/sql/script_sql_usuario.sql
+  sql_ms2:
+    file: ./ms2-propiedades/sql/script_sql_propiedades.sql
+  sql_ms3:
+    file: ./ms3-gestion/sql/script_sql_gestion.sql
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Volúmenes
+# ─────────────────────────────────────────────────────────────────────────────
+
+volumes:
+  db_ms1_data:
+    driver: local
+  db_ms2_data:
+    driver: local
+  db_ms3_data:
+    driver: local
+  # Volumen compartido Spark ↔ MS4 para los CSVs del dataset
+  csv_data:
+    driver: local
+  # Volumen compartido: Spark escribe resultados JSON aquí, MS4 los sirve
+  spark_results:
+    driver: local
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Red overlay compartida entre todos los nodos del Swarm
+# ─────────────────────────────────────────────────────────────────────────────
+
+networks:
+  red_microservicios:
+    driver: overlay
+    attachable: true

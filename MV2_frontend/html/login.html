@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Iniciar Sesión</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    body { background: #f0f4f8; }
+    .login-card {
+      max-width: 420px;
+      margin: 100px auto 0;
+      border: none;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.10);
+    }
+    .login-header {
+      background: #0d6efd;
+      border-radius: 16px 16px 0 0;
+      padding: 32px 24px 20px;
+      text-align: center;
+      color: #fff;
+    }
+    .login-header i { font-size: 48px; display: block; margin-bottom: 10px; }
+    .login-body { padding: 32px; }
+  </style>
+</head>
+<body>
+  <div class="login-card card">
+    <div class="login-header">
+      <i class="bi bi-building-lock"></i>
+      <h4 class="mb-0 fw-bold">Sistema Residencial</h4>
+      <small class="opacity-75">Acceso solo para administradores</small>
+    </div>
+    <div class="login-body">
+      <form id="form-login">
+        <div class="mb-3">
+          <label for="username" class="form-label fw-semibold">
+            <i class="bi bi-person me-1"></i>Usuario
+          </label>
+          <input type="text" class="form-control form-control-lg" id="username"
+                 placeholder="Ingresa tu usuario" autocomplete="username" required/>
+        </div>
+        <div class="mb-4">
+          <label for="password" class="form-label fw-semibold">
+            <i class="bi bi-lock me-1"></i>Contraseña
+          </label>
+          <div class="input-group">
+            <input type="password" class="form-control form-control-lg" id="password"
+                   placeholder="Ingresa tu contraseña" autocomplete="current-password" required/>
+            <button class="btn btn-outline-secondary" type="button" id="toggle-pw" tabindex="-1">
+              <i class="bi bi-eye" id="eye-icon"></i>
+            </button>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg w-100" id="btn-login">
+          <span id="btn-text"><i class="bi bi-box-arrow-in-right me-2"></i>Iniciar sesión</span>
+          <span id="btn-spinner" class="d-none">
+            <span class="spinner-border spinner-border-sm me-2"></span>Verificando...
+          </span>
+        </button>
+      </form>
+      <div id="msg" class="alert alert-danger mt-3 d-none"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Si ya hay sesión activa, redirigir
+    if (localStorage.getItem('admin_session')) {
+      window.location.replace('/capasFront-ms1/index.html');
+    }
+
+    // Mostrar/ocultar contraseña
+    document.getElementById('toggle-pw').addEventListener('click', function() {
+      const pw = document.getElementById('password');
+      const icon = document.getElementById('eye-icon');
+      if (pw.type === 'password') {
+        pw.type = 'text';
+        icon.className = 'bi bi-eye-slash';
+      } else {
+        pw.type = 'password';
+        icon.className = 'bi bi-eye';
+      }
+    });
+
+    document.getElementById('form-login').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const msg      = document.getElementById('msg');
+
+      // Loading state
+      document.getElementById('btn-text').classList.add('d-none');
+      document.getElementById('btn-spinner').classList.remove('d-none');
+      document.getElementById('btn-login').disabled = true;
+      msg.classList.add('d-none');
+
+      try {
+        const res  = await fetch('/api/login', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        // Guardar sesión
+        localStorage.setItem('admin_session', JSON.stringify(data));
+
+        // Si debe cambiar contraseña → forzar cambio
+        if (data.password_changed === 0) {
+          window.location.replace('/cambiar_password.html');
+        } else {
+          window.location.replace('/capasFront-ms1/index.html');
+        }
+
+      } catch (err) {
+        msg.textContent = err.message || 'Error al conectar con el servidor.';
+        msg.classList.remove('d-none');
+        // Restaurar botón
+        document.getElementById('btn-text').classList.remove('d-none');
+        document.getElementById('btn-spinner').classList.add('d-none');
+        document.getElementById('btn-login').disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

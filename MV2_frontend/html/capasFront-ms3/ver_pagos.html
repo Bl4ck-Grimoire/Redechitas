@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ver Pagos</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="index.html"><i class="bi bi-building me-2"></i>MS3 · Gestión</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><span class="nav-link text-white-50" id="nav-nombre"></span></li>
+          <li class="nav-item"><a class="nav-link" href="#" onclick="logout()">Cerrar sesión</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-5">
+    <div id="alert-filtro" class="alert alert-info d-none mb-3"></div>
+    <div class="card shadow-sm">
+      <div class="card-header bg-primary text-white py-3 d-flex justify-content-between align-items-center">
+        <h4 class="mb-0"><i class="bi bi-cash-coin me-2"></i>Pagos de Administración</h4>
+        <div class="d-flex gap-2 align-items-center">
+          <input type="number" id="filtro-gestion" class="form-control form-control-sm" placeholder="ID Gestión" style="width:130px"/>
+          <button onclick="filtrarPorGestion()" class="btn btn-light btn-sm"><i class="bi bi-filter"></i> Filtrar</button>
+          <button onclick="cargarTodos()" class="btn btn-outline-light btn-sm"><i class="bi bi-x"></i> Todos</button>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-striped table-bordered table-hover mb-0">
+            <thead class="table-dark">
+              <tr><th>ID</th><th>Gestión</th><th>Usuario</th><th>Apartamento</th><th>Mes</th><th>Año</th><th>Monto</th><th>Estado</th><th>Fecha Pago</th></tr>
+            </thead>
+            <tbody id="tabla-body">
+              <tr><td colspan="9" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer text-center"><a href="index.html" class="btn btn-secondary"><i class="bi bi-arrow-left me-1"></i>Volver</a></div>
+    </div>
+  </div>
+
+  <script src="/auth.js"></script>
+  <script>
+    const session = requireAuth();
+    if (!session) throw new Error('no session');
+    document.getElementById('nav-nombre').textContent = session.nombre;
+    const conjuntoFiltro = session.conjunto_id ?? null;
+
+    if (conjuntoFiltro) {
+      const a = document.getElementById('alert-filtro');
+      a.classList.remove('d-none');
+      a.textContent = `Mostrando pagos del Conjunto ID: ${conjuntoFiltro}`;
+    }
+
+    function badgeEstado(e) {
+      const c = { pagado:'success', pendiente:'warning', vencido:'danger' };
+      const t = e === 'pendiente' ? 'text-dark' : '';
+      return `<span class="badge bg-${c[e]} ${t}">${e.charAt(0).toUpperCase()+e.slice(1)}</span>`;
+    }
+
+    async function obtenerAptosDelConjunto() {
+      if (!conjuntoFiltro) return null;
+      const torres = await fetch('/api/torres').then(r => r.json());
+      const aptos  = await fetch('/api/apartamentos').then(r => r.json());
+      const torresIds = new Set(torres.filter(t => t.conjunto_id === conjuntoFiltro).map(t => t.id));
+      return new Set(aptos.filter(a => torresIds.has(a.torre_id)).map(a => a.id));
+    }
+
+    async function renderTabla(pagos) {
+      const tbody = document.getElementById('tabla-body');
+      let lista = pagos;
+
+      if (conjuntoFiltro) {
+        // Necesitamos los apartamento_id de las gestiones para filtrar
+        const gestiones = await fetch('/api/gestiones').then(r => r.json());
+        const aptosIds  = await obtenerAptosDelConjunto();
+        const gestionesIds = new Set(gestiones.filter(g => aptosIds.has(g.apartamento_id)).map(g => g.id));
+        lista = pagos.filter(p => gestionesIds.has(p.gestion_propiedades_id));
+      }
+
+      if (!lista.length) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">No hay pagos para mostrar.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = '';
+      lista.forEach(p => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${p.id}</td>
+          <td>${p.gestion_propiedades_id}</td>
+          <td>${p.nombre_usuario ?? '—'}</td>
+          <td>${p.numero_apartamento ? 'Apto '+p.numero_apartamento : '—'}</td>
+          <td>${p.mes_facturacion.charAt(0).toUpperCase()+p.mes_facturacion.slice(1)}</td>
+          <td>${p.anio_facturacion}</td>
+          <td>$${Number(p.monto).toLocaleString('es-CO')}</td>
+          <td>${badgeEstado(p.estado)}</td>
+          <td>${p.fecha_pago ?? '—'}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    async function cargarTodos() {
+      document.getElementById('filtro-gestion').value = '';
+      try {
+        const pagos = await fetch('/api/pagos').then(r => r.json());
+        await renderTabla(pagos);
+      } catch {
+        document.getElementById('tabla-body').innerHTML =
+          '<tr><td colspan="9" class="text-center text-danger py-4">Error al conectar con el servidor.</td></tr>';
+      }
+    }
+
+    async function filtrarPorGestion() {
+      const id = document.getElementById('filtro-gestion').value;
+      if (!id) { cargarTodos(); return; }
+      try {
+        const pagos = await fetch(`/api/pagos/gestion/${id}`).then(r => r.json());
+        await renderTabla(Array.isArray(pagos) ? pagos : []);
+      } catch {
+        document.getElementById('tabla-body').innerHTML =
+          '<tr><td colspan="9" class="text-center text-danger py-4">Error al conectar con el servidor.</td></tr>';
+      }
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('gestion')) {
+      document.getElementById('filtro-gestion').value = params.get('gestion');
+      filtrarPorGestion();
+    } else {
+      cargarTodos();
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Insertar Gestión</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <script src="/auth.js"></script>
+  <script>
+    const SESSION = requireAuth();
+    if (!SESSION) throw new Error('no session');
+  </script>
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="index.html"><i class="bi bi-building me-2"></i>Gestión de Propiedades</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle active" href="#" data-bs-toggle="dropdown"><i class="bi bi-house-door me-1"></i>Gestiones</a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="ver_gestiones.html">Ver gestiones</a></li>
+              <li><a class="dropdown-item" href="insertar_gestion.html">Insertar gestión</a></li>
+              <li><a class="dropdown-item" href="consultar_gestion.html">Consultar gestión</a></li>
+              <li><a class="dropdown-item" href="editar_gestion.html">Editar gestión</a></li>
+              <li><a class="dropdown-item" href="eliminar_gestion.html">Eliminar gestión</a></li>
+            </ul>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown"><i class="bi bi-cash-coin me-1"></i>Pagos</a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="ver_pagos.html">Ver pagos</a></li>
+              <li><a class="dropdown-item" href="insertar_pago.html">Registrar pago</a></li>
+              <li><a class="dropdown-item" href="actualizar_pago.html">Actualizar estado</a></li>
+            </ul>
+          </li>
+        </ul>
+        <div id="user-badge" class="ms-3"></div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-5">
+    <div class="card shadow-sm col-md-7 mx-auto">
+      <div class="card-header bg-success text-white py-3">
+        <h4 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Insertar Nueva Gestión</h4>
+      </div>
+      <div class="card-body">
+
+        <div id="banner-conjunto" class="alert alert-info d-flex align-items-center gap-2 mb-3 d-none">
+          <i class="bi bi-lock-fill"></i>
+          <span id="banner-texto"></span>
+        </div>
+
+        <form id="form-insertar">
+          <div class="mb-3">
+            <label for="id_usuario" class="form-label">ID del Usuario</label>
+            <input type="number" class="form-control" id="id_usuario" placeholder="Ej: 1" required/>
+            <div class="form-text">El usuario debe tener rol arrendatario o arrendador.</div>
+          </div>
+          <div class="mb-3">
+            <label for="id_apartamento" class="form-label">ID del Apartamento</label>
+            <input type="number" class="form-control" id="id_apartamento" placeholder="Ej: 1" required/>
+            <div id="apto-feedback" class="form-text d-none"></div>
+          </div>
+          <div class="mb-3">
+            <label for="fecha_inicio" class="form-label">Fecha de Inicio</label>
+            <input type="date" class="form-control" id="fecha_inicio" required/>
+          </div>
+          <div class="mb-3">
+            <label for="fecha_fin" class="form-label">Fecha de Fin <span class="text-muted small">(opcional)</span></label>
+            <input type="date" class="form-control" id="fecha_fin"/>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success"><i class="bi bi-floppy me-1"></i>Guardar</button>
+            <a href="index.html" class="btn btn-secondary"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+          </div>
+        </form>
+        <div id="mensaje" class="alert mt-4 d-none"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    addUserBadge('#navbarNav', SESSION);
+
+    // MI_CONJUNTO: número del conjunto asignado al admin.
+    // Si es NaN significa que el admin no tiene conjunto asignado → se trata
+    // como superadmin (puede gestionar todo).
+    const MI_CONJUNTO = Number(SESSION.conjunto_id);
+    const esAdmin     = !isSuperAdmin(SESSION) && !isNaN(MI_CONJUNTO);
+
+    if (esAdmin) {
+      document.getElementById('banner-texto').textContent =
+        `Solo puedes crear gestiones para apartamentos de tu conjunto (ID: ${MI_CONJUNTO}).`;
+      document.getElementById('banner-conjunto').classList.remove('d-none');
+    }
+
+    // ── Verificar si un apartamento pertenece al conjunto del admin ───────────
+    // Devuelve { valido: bool, mensaje: string }
+    async function verificarConjuntoApartamento(id_apartamento) {
+      if (!esAdmin) return { valido: true, mensaje: '' };
+
+      try {
+        // 1. Obtener el apartamento de MS2
+        const resApto = await fetch(`/api/apartamentos/${id_apartamento}`);
+        if (!resApto.ok) return { valido: false, mensaje: `Apartamento ID ${id_apartamento} no encontrado en MS2.` };
+        const apto = await resApto.json();
+        if (apto.error || !apto.id) return { valido: false, mensaje: `Apartamento ID ${id_apartamento} no encontrado.` };
+
+        // 2. Obtener la torre del apartamento
+        const resTorre = await fetch(`/api/torres/${apto.torre_id}`);
+        if (!resTorre.ok) return { valido: false, mensaje: `Torre ID ${apto.torre_id} no encontrada.` };
+        const torre = await resTorre.json();
+        if (torre.error || !torre.id) return { valido: false, mensaje: `Torre ID ${apto.torre_id} no encontrada.` };
+
+        // 3. Comparar — Number() en ambos lados para evitar mismatch de tipos
+        if (Number(torre.conjunto_id) !== MI_CONJUNTO) {
+          return {
+            valido: false,
+            mensaje: `El apartamento ${id_apartamento} pertenece al conjunto ID ${torre.conjunto_id}, no al tuyo (${MI_CONJUNTO}).`
+          };
+        }
+
+        return { valido: true, mensaje: `Apto ${apto.numero} — pertenece a tu conjunto.` };
+
+      } catch (err) {
+        console.error('Error verificando apartamento:', err);
+        return { valido: false, mensaje: 'No se pudo verificar el apartamento con MS2. Intenta de nuevo.' };
+      }
+    }
+
+    // Feedback en tiempo real al salir del campo
+    document.getElementById('id_apartamento').addEventListener('blur', async function() {
+      if (!esAdmin || !this.value) return;
+      const feedback = document.getElementById('apto-feedback');
+      feedback.textContent = 'Verificando...';
+      feedback.className   = 'form-text';
+      feedback.classList.remove('d-none');
+      const { valido, mensaje } = await verificarConjuntoApartamento(parseInt(this.value));
+      feedback.className = `form-text ${valido ? 'text-success' : 'text-danger'}`;
+      feedback.textContent = mensaje;
+    });
+
+    document.getElementById('form-insertar').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const id_apartamento = parseInt(document.getElementById('id_apartamento').value);
+      const msg            = document.getElementById('mensaje');
+      msg.classList.add('d-none');
+
+      // Verificación en submit — SIEMPRE se ejecuta, independiente del blur
+      const { valido, mensaje } = await verificarConjuntoApartamento(id_apartamento);
+      if (!valido) {
+        msg.classList.remove('d-none', 'alert-success');
+        msg.className = 'alert alert-danger mt-4';
+        msg.textContent = '⛔ ' + mensaje;
+        return; // ← detiene el submit aquí
+      }
+
+      // Pasar a crear la gestión en MS3
+      try {
+        const body = {
+          id_usuario:     parseInt(document.getElementById('id_usuario').value),
+          id_apartamento,
+          fecha_inicio:   document.getElementById('fecha_inicio').value,
+          fecha_fin:      document.getElementById('fecha_fin').value || undefined
+        };
+        const res  = await fetch('/api/gestiones', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        msg.classList.remove('d-none', 'alert-danger', 'alert-success');
+        if (data.error) {
+          msg.classList.add('alert', 'alert-danger');
+          msg.textContent = 'Error: ' + data.error;
+        } else {
+          msg.classList.add('alert', 'alert-success');
+          msg.textContent = data.mensaje + ' (ID: ' + data.id + ')';
+          document.getElementById('form-insertar').reset();
+          document.getElementById('apto-feedback').classList.add('d-none');
+        }
+      } catch {
+        msg.classList.remove('d-none');
+        msg.className = 'alert alert-danger mt-4';
+        msg.textContent = 'Error al conectar con el servidor MS3.';
+      }
+    });
+  </script>
+</body>
+</html>

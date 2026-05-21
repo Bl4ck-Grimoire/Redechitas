@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Insertar Usuario</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+</head>
+<body>
+  <script src="/auth.js"></script>
+  <script>
+    const SESSION = requireAuth();
+    if (!SESSION) throw new Error('no session');
+  </script>
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold" href="index.html"><i class="bi bi-people me-1"></i>MS1 · Usuarios</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item"><a class="nav-link" href="ver_usuarios.html">Ver</a></li>
+          <li class="nav-item"><a class="nav-link active" href="insertar_usuario.html">Insertar</a></li>
+          <li class="nav-item"><a class="nav-link" href="consultar_usuario.html">Consultar</a></li>
+          <li class="nav-item"><a class="nav-link" href="editar_usuario.html">Editar</a></li>
+          <li class="nav-item"><a class="nav-link" href="borrar_usuario.html">Eliminar</a></li>
+        </ul>
+        <div id="user-badge"></div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-5">
+    <div class="card shadow-sm col-md-7 mx-auto">
+      <div class="card-header bg-success text-white py-3">
+        <h4 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Insertar Nuevo Usuario</h4>
+      </div>
+      <div class="card-body">
+        <form id="usuario-form">
+          <div class="mb-3">
+            <label for="nombre" class="form-label">Nombre</label>
+            <input type="text" class="form-control" id="nombre" required/>
+          </div>
+          <div class="mb-3">
+            <label for="telefono" class="form-label">Teléfono</label>
+            <input type="text" class="form-control" id="telefono" required/>
+          </div>
+          <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="email" required/>
+          </div>
+
+          <div class="mb-3">
+            <label for="rol" class="form-label">Rol</label>
+            <select class="form-select" id="rol" required onchange="onRolChange()">
+              <option value="">Seleccione un rol</option>
+              <!-- La opción administrador se añade dinámicamente solo para superadmin -->
+              <option value="arrendatario">Arrendatario</option>
+              <option value="arrendador">Arrendador</option>
+            </select>
+          </div>
+
+          <!-- Campos exclusivos de administrador (ocultos por defecto) -->
+          <div id="bloque-admin" class="d-none">
+            <div class="alert alert-warning d-flex align-items-center gap-2 mb-3">
+              <i class="bi bi-shield-lock-fill"></i>
+              <span>Los siguientes campos son requeridos para administradores.</span>
+            </div>
+            <div class="mb-3">
+              <label for="username" class="form-label">Username <small class="text-muted">(único)</small></label>
+              <input type="text" class="form-control" id="username"/>
+            </div>
+            <div class="mb-3">
+              <label for="password" class="form-label">Contraseña</label>
+              <input type="password" class="form-control" id="password" minlength="6"/>
+              <div class="form-text">El admin deberá cambiarla en su primer inicio de sesión.</div>
+            </div>
+            <div class="mb-3" id="bloque-conjunto">
+              <label for="conjunto_id" class="form-label">ID del conjunto asignado</label>
+              <input type="number" class="form-control" id="conjunto_id" placeholder="Ej: 1"/>
+              <div class="form-text">El admin solo podrá gestionar este conjunto.</div>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-success"><i class="bi bi-floppy me-1"></i>Guardar</button>
+            <a href="index.html" class="btn btn-secondary"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+          </div>
+        </form>
+        <div id="mensaje" class="alert mt-4 d-none"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    addUserBadge('#navbarNav', SESSION);
+    const superAdmin = isSuperAdmin(SESSION);
+
+    // Solo el superadmin puede crear administradores
+    if (superAdmin) {
+      const rolSelect = document.getElementById('rol');
+      const opt = document.createElement('option');
+      opt.value = 'administrador';
+      opt.textContent = 'Administrador';
+      rolSelect.insertBefore(opt, rolSelect.children[1]); // después del placeholder
+    }
+
+    function onRolChange() {
+      const rol   = document.getElementById('rol').value;
+      const bloque = document.getElementById('bloque-admin');
+      if (rol === 'administrador') {
+        bloque.classList.remove('d-none');
+        document.getElementById('username').required = true;
+        document.getElementById('password').required = true;
+      } else {
+        bloque.classList.add('d-none');
+        document.getElementById('username').required = false;
+        document.getElementById('password').required = false;
+      }
+    }
+
+    document.getElementById('usuario-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const rol        = document.getElementById('rol').value;
+      const nombre     = document.getElementById('nombre').value;
+      const telefono   = document.getElementById('telefono').value;
+      const email      = document.getElementById('email').value;
+      const username   = document.getElementById('username').value || null;
+      const password   = document.getElementById('password').value || null;
+      const conjunto_id_raw = document.getElementById('conjunto_id').value;
+      if (rol === 'administrador' && !conjunto_id_raw) {
+        const msg = document.getElementById('mensaje');
+        msg.className = 'alert alert-danger mt-4';
+        msg.classList.remove('d-none');
+        msg.textContent = 'El ID del conjunto es obligatorio para un administrador.';
+        return;
+      }
+      const conjunto_id = rol === 'administrador'
+        ? parseInt(conjunto_id_raw)
+        : null;
+
+      try {
+        const res  = await fetch('/api/usuarios', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ nombre, telefono, email, username, password, rol, conjunto_id })
+        });
+        const data = await res.json();
+
+        const msg = document.getElementById('mensaje');
+        msg.classList.remove('d-none', 'alert-danger', 'alert-success');
+        if (data.error) {
+          msg.classList.add('alert', 'alert-danger');
+          msg.textContent = 'Error: ' + data.error;
+        } else {
+          msg.classList.add('alert', 'alert-success');
+          msg.textContent = data.mensaje;
+          document.getElementById('usuario-form').reset();
+          onRolChange();
+        }
+      } catch {
+        const msg = document.getElementById('mensaje');
+        msg.classList.remove('d-none');
+        msg.className = 'alert alert-danger mt-4';
+        msg.textContent = 'Error al conectar con el servidor.';
+      }
+    });
+  </script>
+</body>
+</html>

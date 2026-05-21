@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Usuarios - Página Principal</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <script src="/auth.js"></script>
+  <script>
+    const SESSION = requireAuth();
+    if (!SESSION) throw new Error('no session');
+  </script>
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold" href="index.html">
+        <i class="bi bi-people me-1"></i>MS1 · Usuarios
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item"><a class="nav-link" href="ver_usuarios.html"><i class="bi bi-list-ul me-1"></i>Ver</a></li>
+          <li class="nav-item"><a class="nav-link" href="insertar_usuario.html"><i class="bi bi-plus-circle me-1"></i>Insertar</a></li>
+          <li class="nav-item"><a class="nav-link" href="consultar_usuario.html"><i class="bi bi-search me-1"></i>Consultar</a></li>
+          <li class="nav-item"><a class="nav-link" href="editar_usuario.html"><i class="bi bi-pencil me-1"></i>Editar</a></li>
+          <li class="nav-item"><a class="nav-link" href="borrar_usuario.html"><i class="bi bi-trash me-1"></i>Eliminar</a></li>
+        </ul>
+        <div id="user-badge"></div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-5">
+
+    <!-- Banner del conjunto activo -->
+    <div id="banner-conjunto" class="alert alert-info d-flex align-items-center gap-2 mb-4 d-none">
+      <i class="bi bi-building-check fs-5"></i>
+      <span id="banner-texto"></span>
+    </div>
+
+    <div class="card shadow">
+      <div class="card-header text-center bg-primary text-white py-3">
+        <h3 class="mb-0"><i class="bi bi-people me-2"></i>Sistema de Gestión Residencial</h3>
+        <small class="opacity-75">Microservicio 1 — Usuarios</small>
+      </div>
+      <div class="card-body px-5 py-4">
+        <hr class="mb-4"/>
+
+        <!-- Acciones de usuarios -->
+        <h6 class="text-muted text-uppercase small fw-bold mb-3">
+          <i class="bi bi-people me-1"></i>Gestión de usuarios
+        </h6>
+        <div class="d-grid gap-2 col-8 mx-auto mb-4">
+          <a href="ver_usuarios.html"      class="btn btn-outline-primary"><i class="bi bi-list-ul me-2"></i>Ver Usuarios</a>
+          <a href="insertar_usuario.html"  class="btn btn-outline-success"><i class="bi bi-plus-circle me-2"></i>Insertar Usuario</a>
+          <a href="consultar_usuario.html" class="btn btn-outline-info"><i class="bi bi-search me-2"></i>Consultar Usuario</a>
+          <a href="editar_usuario.html"    class="btn btn-outline-warning"><i class="bi bi-pencil me-2"></i>Editar Usuario</a>
+          <a href="borrar_usuario.html"    class="btn btn-outline-danger"><i class="bi bi-trash me-2"></i>Eliminar Usuario</a>
+        </div>
+
+        <hr class="my-4"/>
+
+        <!-- Navegación entre microservicios -->
+        <h6 class="text-muted text-uppercase small fw-bold mb-3">
+          <i class="bi bi-arrows-angle-expand me-1"></i>Ir a otro microservicio
+        </h6>
+        <div class="row g-2 col-8 mx-auto">
+          <div class="col-6">
+            <a href="/capasFront-ms2/index.html" class="btn btn-primary w-100">
+              <i class="bi bi-buildings me-2"></i>MS2 · Propiedades
+            </a>
+          </div>
+          <div class="col-6">
+            <a href="/capasFront-ms3/index.html" class="btn btn-primary w-100">
+              <i class="bi bi-house-door me-2"></i>MS3 · Gestión
+            </a>
+          </div>
+          <div class="col-12">
+            <a href="/capasFront-ms4/dashboard.html" class="btn btn-dark w-100" id="btn-dashboard">
+              <i class="bi bi-bar-chart-line me-2"></i>MS4 · Analytics Dashboard
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    addUserBadge('#navbarNav', SESSION);
+    if (!isSuperAdmin(SESSION)) {
+      document.getElementById('btn-dashboard').classList.add('d-none');
+    }
+
+    // Banner de conjunto para admins no superadmin
+    if (!isSuperAdmin(SESSION)) {
+      document.getElementById('banner-texto').textContent =
+        `Estás gestionando el Conjunto ID: ${SESSION.conjunto_id} — Solo verás y podrás gestionar datos de este conjunto.`;
+      document.getElementById('banner-conjunto').classList.remove('d-none');
+    }
+  </script>
+</body>
+</html>
