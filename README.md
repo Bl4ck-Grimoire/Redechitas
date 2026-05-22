@@ -184,7 +184,7 @@ vagrant ssh servidorUbuntu2
 
 ### 2. Clonar el repositorio
 
-Dentro de servidorUbuntu1
+Dentro de servidorUbuntu1:
 ```bash
 git clone https://github.com/Bl4ck-Grimoire/Redechitas.git
 ```
@@ -192,7 +192,6 @@ git clone https://github.com/Bl4ck-Grimoire/Redechitas.git
 ### 3. Inicializar Docker Swarm
 
 En el servidorUbuntu1:
-
 ```bash
 docker swarm init --advertise-addr 192.168.100.2
 ```
