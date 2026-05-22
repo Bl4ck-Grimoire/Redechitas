@@ -15,7 +15,7 @@ Aplicación basada en **microservicios REST** empaquetada en contenedores Docker
 7. [Puertos y Endpoints](#puertos-y-endpoints)
 8. [Dataset y Análisis con Apache Spark](#dataset-y-análisis-con-apache-spark)
 9. [Balanceo de Carga y Escalabilidad](#balanceo-de-carga-y-escalabilidad)
-10. [Pruebas de Desempeño](#pruebas-de-desempeño)
+10. [Tecnologías Utilizadas](#tecnologías-utilizadas)
 
 ---
 
@@ -105,8 +105,6 @@ Servicio FastAPI que coordina el clúster de Spark para procesar datasets CSV y 
 - Puertos **80, 8080, 8081, 8404** disponibles en el nodo manager
 - Puerto **80** disponible en el nodo worker (frontend)
 
-> ⚠️ **Nota:** Las contraseñas de base de datos están definidas en el `docker-compose.yml`. Para un entorno de producción real, usar Docker Secrets o variables de entorno externas.
-
 ---
 
 ## Estructura del Repositorio
@@ -173,6 +171,11 @@ proyecto_final_infraestructura_v100/
 
 ## Paso a Paso para Reproducir el Despliegue
 
+>Este proyecto fue realizado desde el usuario root que tiene todos los permimos para mayor comodidad ejecutar al iniciar el comando, de lo contrario añadir "sudo" antes de cada comando
+```bash
+sudo -i
+```
+
 ### 1. Iniciar e ingresar a las maquinas virtuales
 
 ```bash
@@ -186,17 +189,14 @@ vagrant ssh servidorUbuntu2
 
 ### 2. Clonar el repositorio
 
-Dentro de servidorUbuntu1
+Dentro de servidorUbuntu1:
 ```bash
-mkdir redechitas
-cd redechitas
 git clone https://github.com/Bl4ck-Grimoire/Redechitas.git
 ```
 
 ### 3. Inicializar Docker Swarm
 
 En el servidorUbuntu1:
-
 ```bash
 docker swarm init --advertise-addr 192.168.100.2
 ```
@@ -221,24 +221,28 @@ docker node ls
 
 ### 4. Cargar los CSVs del dataset en el volumen de Spark
 
-Antes de desplegar el stack, crea el volumen y copia los archivos CSV del dataset:
-
+Descarga los csv para que el ms4 pueda hacer el analisis con el siguiente link:
 ```bash
-# Crear el volumen manualmente en el manager
-docker volume create microservicios-docker_csv_data
-
-# Copiar los CSVs al volumen usando un contenedor auxiliar
-docker run --rm \
-  -v microservicios-docker_csv_data:/data/csvs \
-  -v $(pwd)/dataset:/source \
-  alpine sh -c "cp /source/*.csv /data/csvs/"
+https://www.kaggle.com/datasets/johanneduar/residential-complex-dataset
 ```
 
-> 💡 Coloca tus archivos CSV en una carpeta `dataset/` en la raíz del proyecto antes de ejecutar este paso.
+luego carga los csv en la carpeta de las maquinas virtuales y luego copialos al directorio
+```bash
+mkdir -p /var/lib/docker/volumes/microservicios-docker_csv_data/_data/
+cp /vagrant/*.csv /var/lib/docker/volumes/microservicios-docker_csv_data/_data/
+```
+
+verifica que se cargaron correctamente
+```bash
+cd /var/lib/docker/volumes/microservicios-docker_csv_data/_data/
+ls
+```
 
 ### 5. Desplegar el stack en Docker Swarm
 
 ```bash
+cd --
+cd Redechitas
 docker stack deploy -c docker-compose.yml microservicios-docker
 ```
 
@@ -246,7 +250,7 @@ docker stack deploy -c docker-compose.yml microservicios-docker
 
 ```bash
 # Ver todos los servicios del stack
-docker ervice ls
+docker service ls
 
 # Ver el estado detallado de cada tarea
 docker stack ps microservicios-docker
@@ -254,16 +258,16 @@ docker stack ps microservicios-docker
 
 Espera a que todos los servicios estén en estado `Running`. Las bases de datos MySQL pueden tardar hasta 3 minutos en inicializarse por primera vez (el `healthcheck` controla esto).
 
-### 8. Acceder a la aplicación
+### 7. Acceder a la aplicación
 
 | Interfaz | URL |
 |---|---|
 | **Frontend (aplicación)** | `http://192.168.100.3:80` |
 | **API Gateway (HAProxy)** | `http://192.168.100.2:8080` |
-| **HAProxy Stats** | `http://192.168.100.3:8404/stats` |
-| **Spark Master UI** | `http://192.168.100.3:8081` |
+| **HAProxy Stats** | `http://192.168.100.2:8404/stats` |
+| **Spark Master UI** | `http://192.168.100.2:8081` |
 
-### 9. Credenciales iniciales
+### 8. Credenciales iniciales
 
 Al arrancar MS1, el `entrypoint.sh` crea automáticamente un usuario superadmin para la gestion completa de la aplicación. Revisa los logs para obtener las credenciales generadas:
 
