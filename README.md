@@ -226,7 +226,7 @@ Descarga los csv para que el ms4 pueda hacer el analisis con el siguiente link:
 https://www.kaggle.com/datasets/johanneduar/residential-complex-dataset
 ```
 
-luego carga los csv en la carpeta de las maquinas virtuales y luego copialos al directorio
+luego carga los csv en la carpeta compartida de las maquinas virtuales y copialos al directorio correspondiente en ambas máquinas
 ```bash
 mkdir -p /var/lib/docker/volumes/microservicios-docker_csv_data/_data/
 cp /vagrant/*.csv /var/lib/docker/volumes/microservicios-docker_csv_data/_data/
