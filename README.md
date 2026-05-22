@@ -29,15 +29,14 @@ El microservicio número 4 integra un clúster de Apache Spark para el procesami
 
 ## Arquitectura del Sistema
 
-```
+
 Diagrama de arquitectura:
-https://github.com/user-attachments/assets/6457d752-c409-4da9-9cb6-9b06b6ef2c4d
+[Arquitectura](arquitectura.png)
 
 A continuación se adjunta el diagrama de despliegue para una representación más técnica:
-https://github.com/user-attachments/assets/5fb858b2-c083-4df4-bd4a-5e0d7da91311
+[Despliegue](despliegue.png)
 
-
-
+```
 Flujo de una petición del usuario:
   Browser -> Nginx Frontend (:80) -> api -> HAProxy (:8080)
           -> MS1 | MS2 | MS3 -> MySQL
