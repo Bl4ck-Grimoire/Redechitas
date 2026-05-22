@@ -31,10 +31,10 @@ El microservicio número 4 integra un clúster de Apache Spark para el procesami
 
 
 Diagrama de arquitectura:
-[Arquitectura](arquitectura.png)
+![Arquitectura](arquitectura.png)
 
 A continuación se adjunta el diagrama de despliegue para una representación más técnica:
-[Despliegue](despliegue.png)
+![Despliegue](despliegue.png)
 
 ```
 Flujo de una petición del usuario:
