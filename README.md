@@ -15,7 +15,7 @@ Aplicación basada en **microservicios REST** empaquetada en contenedores Docker
 7. [Puertos y Endpoints](#puertos-y-endpoints)
 8. [Dataset y Análisis con Apache Spark](#dataset-y-análisis-con-apache-spark)
 9. [Balanceo de Carga y Escalabilidad](#balanceo-de-carga-y-escalabilidad)
-10. [Pruebas de Desempeño](#pruebas-de-desempeño)
+10. [Tecnologías Utilizadas](#tecnologías-utilizadas)
 
 ---
 
@@ -105,8 +105,6 @@ Servicio FastAPI que coordina el clúster de Spark para procesar datasets CSV y 
 - Puertos **80, 8080, 8081, 8404** disponibles en el nodo manager
 - Puerto **80** disponible en el nodo worker (frontend)
 
-> ⚠️ **Nota:** Las contraseñas de base de datos están definidas en el `docker-compose.yml`. Para un entorno de producción real, usar Docker Secrets o variables de entorno externas.
-
 ---
 
 ## Estructura del Repositorio
@@ -188,8 +186,6 @@ vagrant ssh servidorUbuntu2
 
 Dentro de servidorUbuntu1
 ```bash
-mkdir redechitas
-cd redechitas
 git clone https://github.com/Bl4ck-Grimoire/Redechitas.git
 ```
 
@@ -239,6 +235,7 @@ docker run --rm \
 ### 5. Desplegar el stack en Docker Swarm
 
 ```bash
+cd Redechitas
 docker stack deploy -c docker-compose.yml microservicios-docker
 ```
 
@@ -246,7 +243,7 @@ docker stack deploy -c docker-compose.yml microservicios-docker
 
 ```bash
 # Ver todos los servicios del stack
-docker ervice ls
+docker service ls
 
 # Ver el estado detallado de cada tarea
 docker stack ps microservicios-docker
