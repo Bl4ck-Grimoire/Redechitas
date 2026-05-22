@@ -24,6 +24,7 @@ Aplicación basada en **microservicios REST** empaquetada en contenedores Docker
 El sistema permite gestionar conjuntos residenciales (torres, apartamentos, parqueaderos, usuarios y pagos) a través de una arquitectura de microservicios. Cada microservicio tiene su propia base de datos MySQL, se comunica por una red overlay privada de Docker Swarm y es accesible desde el frontend a través de HAProxy como proxy inverso y balanceador de carga.
 
 El microservicio número 4 integra un clúster de Apache Spark para el procesamiento distribuido de datasets abiertos (CSV), generando reportes estadísticos que se visualizan en el dashboard del panel operacional.
+**Video del funcionamiento:** https://youtu.be/dy3fNslWMnM
 
 ---
 
