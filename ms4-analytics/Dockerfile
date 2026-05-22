@@ -17,7 +17,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # App principal, dashboard y el job de Spark
 COPY app.py .
-#COPY dashboard.html .
 COPY spark_processor.py .
 
 # Directorios de datos y resultados

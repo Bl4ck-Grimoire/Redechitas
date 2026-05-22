@@ -1,15 +1,13 @@
 """
-MS4 – Analytics Service  v2.0  (Spark-powered)
+MS4
 ===============================================
-FastAPI que sirve los resultados pre-computados por el clúster de Spark.
+FastAPI sirve los resultados del clúster de Spark.
 
 Flujo:
   1. spark_processor.py (spark-submit) lee los CSVs y guarda JSON en RESULTS_DIR
-  2. Los endpoints de esta API leen esos JSON pre-computados  →  respuesta inmediata
-  3. Para queries dinámicos (tendencia ad-hoc, cruce, correlación) se usa
-     PySpark on-demand con una sesión persistente (lazy)
-  4. POST /api/analytics/spark/run    →  lanza el job de Spark en background
-  5. GET  /api/analytics/spark/status →  estado del último job
+  2. Los endpoints de esta API leen esos JSON
+  3. POST /api/analytics/spark/run    ->  lanza el job de Spark en background
+  4. GET  /api/analytics/spark/status ->  estado del último job
 """
 
 import os

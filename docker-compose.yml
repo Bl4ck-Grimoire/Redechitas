@@ -14,7 +14,7 @@ services:
     networks:
       - red_microservicios
     deploy:
-      replicas: 1
+      replicas: 2
       endpoint_mode: dnsrr
       placement:
         constraints:
@@ -64,7 +64,7 @@ services:
     networks:
       - red_microservicios
     deploy:
-      replicas: 1
+      replicas: 2
       endpoint_mode: dnsrr
       placement:
         constraints:
@@ -117,7 +117,7 @@ services:
     networks:
       - red_microservicios
     deploy:
-      replicas: 1
+      replicas: 2
       endpoint_mode: dnsrr
       placement:
         constraints:
@@ -153,14 +153,7 @@ services:
       restart_policy:
         condition: on-failure
 
-  # ─────────────────────────────────────────────────────────────────────────────
-  # APACHE SPARK – Clúster de procesamiento distribuido
-  #
-  #   spark-master  →  coordina el clúster  (UI: :8081, protocolo: :7077)
-  #   spark-worker  →  nodos de cómputo     (2 réplicas, escalable)
-  #
-  #   Los CSVs se comparten con MS4 a través del volumen "csv_data"
-  # ─────────────────────────────────────────────────────────────────────────────
+  # Los CSVs se comparten con MS4 a través del volumen "csv_data"
 
   spark-master:
     image: apache/spark:3.5.1
@@ -215,7 +208,6 @@ services:
     networks:
       - red_microservicios
     deploy:
-      # Aumentar réplicas para escalar el clúster horizontalmente
       replicas: 2
       placement:
         constraints:
@@ -225,14 +217,12 @@ services:
         delay: 15s
         max_attempts: 5
 
-  # ─────────────────────────────────────────────────────────────────────────────
   # MS4 – Analytics Service  (puerto interno: 3003)
   #
-  #   FastAPI + PySpark client
-  #   Lee los CSVs desde /data/csvs (mismo volumen que Spark)
-  #   Se conecta al master en spark://spark-master:7077
-  #   Accesible via HAProxy en /api/analytics
-  # ─────────────────────────────────────────────────────────────────────────────
+  # FastAPI + PySpark client
+  # Lee los CSVs desde /data/csvs (mismo volumen que Spark)
+  # Se conecta al master en spark://spark-master:7077
+  # Accesible via HAProxy en /api/analytics
 
   MS4:
     image: emmanuelescobar2007/ms4-analytics
@@ -248,11 +238,10 @@ services:
     networks:
       - red_microservicios
     deploy:
-      replicas: 1
+      replicas: 2
       endpoint_mode: dnsrr
       placement:
         constraints:
-          # Debe correr en el mismo nodo que spark-master para acceder al volumen
           - node.role == manager
       restart_policy:
         condition: on-failure
