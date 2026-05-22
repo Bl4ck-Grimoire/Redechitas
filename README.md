@@ -219,17 +219,8 @@ docker node ls
 Antes de desplegar el stack, crea el volumen y copia los archivos CSV del dataset:
 
 ```bash
-# Crear el volumen manualmente en el manager
-docker volume create microservicios-docker_csv_data
-
-# Copiar los CSVs al volumen usando un contenedor auxiliar
-docker run --rm \
-  -v microservicios-docker_csv_data:/data/csvs \
-  -v $(pwd)/dataset:/source \
-  alpine sh -c "cp /source/*.csv /data/csvs/"
+cd 
 ```
-
-> 💡 Coloca tus archivos CSV en una carpeta `dataset/` en la raíz del proyecto antes de ejecutar este paso.
 
 ### 5. Desplegar el stack en Docker Swarm
 
@@ -250,16 +241,16 @@ docker stack ps microservicios-docker
 
 Espera a que todos los servicios estén en estado `Running`. Las bases de datos MySQL pueden tardar hasta 3 minutos en inicializarse por primera vez (el `healthcheck` controla esto).
 
-### 8. Acceder a la aplicación
+### 7. Acceder a la aplicación
 
 | Interfaz | URL |
 |---|---|
 | **Frontend (aplicación)** | `http://192.168.100.3:80` |
 | **API Gateway (HAProxy)** | `http://192.168.100.2:8080` |
-| **HAProxy Stats** | `http://192.168.100.3:8404/stats` |
-| **Spark Master UI** | `http://192.168.100.3:8081` |
+| **HAProxy Stats** | `http://192.168.100.2:8404/stats` |
+| **Spark Master UI** | `http://192.168.100.2:8081` |
 
-### 9. Credenciales iniciales
+### 8. Credenciales iniciales
 
 Al arrancar MS1, el `entrypoint.sh` crea automáticamente un usuario superadmin para la gestion completa de la aplicación. Revisa los logs para obtener las credenciales generadas:
 
