@@ -171,6 +171,11 @@ proyecto_final_infraestructura_v100/
 
 ## Paso a Paso para Reproducir el Despliegue
 
+>Este proyecto fue realizado desde el usuario root que tiene todos los permimos para mayor comodidad ejecutar al iniciar el comando, de lo contrario añadir "sudo" antes de cada comando
+```bash
+sudo -i
+```
+
 ### 1. Iniciar e ingresar a las maquinas virtuales
 
 ```bash
@@ -216,15 +221,27 @@ docker node ls
 
 ### 4. Cargar los CSVs del dataset en el volumen de Spark
 
-Antes de desplegar el stack, crea el volumen y copia los archivos CSV del dataset:
-
+Descarga los csv para que el ms4 pueda hacer el analisis con el siguiente link:
 ```bash
-cd 
+https://www.kaggle.com/datasets/johanneduar/residential-complex-dataset
+```
+
+luego carga los csv en la carpeta de las maquinas virtuales y luego copialos al directorio
+```bash
+mkdir -p /var/lib/docker/volumes/microservicios-docker_csv_data/_data/
+cp /vagrant/*.csv /var/lib/docker/volumes/microservicios-docker_csv_data/_data/
+```
+
+verifica que se cargaron correctamente
+```bash
+cd /var/lib/docker/volumes/microservicios-docker_csv_data/_data/
+ls
 ```
 
 ### 5. Desplegar el stack en Docker Swarm
 
 ```bash
+cd --
 cd Redechitas
 docker stack deploy -c docker-compose.yml microservicios-docker
 ```
